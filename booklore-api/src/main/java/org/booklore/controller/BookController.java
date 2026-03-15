@@ -1,36 +1,10 @@
 package org.booklore.controller;
 
-import org.booklore.config.security.annotation.CheckBookAccess;
-import org.booklore.exception.ApiError;
-import org.booklore.model.dto.Book;
-import org.booklore.model.dto.BookRecommendation;
-import org.booklore.model.dto.BookViewerSettings;
-import org.booklore.model.dto.request.AttachBookFileRequest;
-import org.booklore.model.dto.request.CreatePhysicalBookRequest;
-import org.booklore.model.dto.request.DuplicateDetectionRequest;
-import org.booklore.model.dto.request.PersonalRatingUpdateRequest;
-import org.booklore.model.dto.request.ReadProgressRequest;
-import org.booklore.model.dto.request.ReadStatusUpdateRequest;
-import org.booklore.model.dto.request.ShelvesAssignmentRequest;
-import org.booklore.model.dto.response.AttachBookFileResponse;
-import org.booklore.model.dto.response.BookDeletionResponse;
-import org.booklore.model.dto.response.BookStatusUpdateResponse;
-import org.booklore.model.dto.response.DuplicateGroup;
-import org.booklore.model.dto.response.PersonalRatingUpdateResponse;
-import org.booklore.model.enums.ResetProgressType;
-import org.booklore.service.book.BookFileAttachmentService;
-import org.booklore.service.book.BookService;
-import org.booklore.service.book.BookUpdateService;
-import org.booklore.service.book.DuplicateDetectionService;
-import org.booklore.service.book.PhysicalBookService;
-import org.booklore.service.metadata.BookMetadataService;
-import org.booklore.service.progress.ReadingProgressService;
-import org.booklore.service.recommender.BookRecommendationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -38,6 +12,18 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
+import org.booklore.config.security.annotation.CheckBookAccess;
+import org.booklore.exception.ApiError;
+import org.booklore.model.dto.Book;
+import org.booklore.model.dto.BookRecommendation;
+import org.booklore.model.dto.BookViewerSettings;
+import org.booklore.model.dto.request.*;
+import org.booklore.model.dto.response.*;
+import org.booklore.model.enums.ResetProgressType;
+import org.booklore.service.book.*;
+import org.booklore.service.metadata.BookMetadataService;
+import org.booklore.service.progress.ReadingProgressService;
+import org.booklore.service.recommender.BookRecommendationService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -307,5 +293,19 @@ public class BookController {
             @Parameter(description = "ID of the target book to attach the files to") @PathVariable Long targetBookId,
             @Parameter(description = "Request containing source book IDs and delete option") @RequestBody @Valid AttachBookFileRequest request) {
         return ResponseEntity.ok(bookFileAttachmentService.attachBookFiles(targetBookId, request.getSourceBookIds(), request.isMoveFiles()));
+    }
+
+    @Operation(summary = "Update book's primary format", description = "Change the primary format of a book.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Primary format updated successfully"),
+            @ApiResponse(responseCode = "404", description = "Book not found")
+    })
+    @PatchMapping("/{bookId}/primary-format")
+    @CheckBookAccess(bookIdParam = "bookId")
+    @PreAuthorize("@securityUtil.canManageLibrary() or @securityUtil.isAdmin()")
+    public ResponseEntity<Book> updatePrimaryFormat(
+            @Parameter(description = "ID of the book") @PathVariable long bookId,
+            @Parameter(description = "Request containing the primary book format to set") @RequestBody UpdateBookPrimaryFormatRequest request) {
+        return ResponseEntity.ok(bookService.updatePrimaryFormat(bookId, request.getBookFileType()));
     }
 }

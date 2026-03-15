@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -89,6 +90,9 @@ public class BookEntity {
     @OneToMany(mappedBy = "book", fetch = FetchType.LAZY)
     private List<UserBookProgressEntity> userBookProgress;
 
+    @Column(name = "primary_book_file_type")
+    private BookFileType primaryBookFileType;
+
     public Path getFullFilePath() {
         BookFileEntity primaryBookFile = getPrimaryBookFile();
         if (primaryBookFile == null || libraryPath == null || libraryPath.getPath() == null || primaryBookFile.getFileSubPath() == null || primaryBookFile.getFileName() == null) {
@@ -102,21 +106,39 @@ public class BookEntity {
         if (bookFiles == null) {
             bookFiles = new ArrayList<>();
         }
+
         if (bookFiles.isEmpty()) {
             return null;
         }
-        if (library != null && library.getFormatPriority() != null && !library.getFormatPriority().isEmpty()) {
-            for (BookFileType format : library.getFormatPriority()) {
-                var match = bookFiles.stream()
-                        .filter(bf -> bf.isBookFormat() && bf.getBookType() == format)
-                        .findFirst();
-                if (match.isPresent()) {
-                    return match.get();
-                }
+
+        List<BookFileType> formatPriority = new ArrayList<>();
+        if (Objects.nonNull(primaryBookFileType)) {
+            formatPriority.add(primaryBookFileType);
+        }
+
+        if (libraryHasFormatPriority()) {
+            formatPriority.addAll(library.getFormatPriority());
+        }
+
+
+        for (BookFileType format : formatPriority) {
+            var match = bookFiles.stream()
+                    .filter(bf -> bf.isBookFormat() && bf.getBookType() == format)
+                    .findFirst();
+            if (match.isPresent()) {
+                return match.get();
             }
         }
+
         return bookFiles.getFirst();
+
     }
+
+    private boolean libraryHasFormatPriority() {
+        return library != null && library.getFormatPriority() != null && !library.getFormatPriority().isEmpty();
+    }
+
+
 
     public boolean hasFiles() {
         return bookFiles != null && !bookFiles.isEmpty();
