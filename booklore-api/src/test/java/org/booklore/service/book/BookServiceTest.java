@@ -2,7 +2,6 @@ package org.booklore.service.book;
 
 import org.booklore.config.security.service.AuthenticationService;
 import org.booklore.exception.APIException;
-import org.booklore.service.audit.AuditService;
 import org.booklore.mapper.BookMapper;
 import org.booklore.model.dto.*;
 import org.booklore.model.dto.request.ReadProgressRequest;
@@ -11,6 +10,7 @@ import org.booklore.model.dto.response.BookStatusUpdateResponse;
 import org.booklore.model.entity.*;
 import org.booklore.model.enums.BookFileType;
 import org.booklore.repository.*;
+import org.booklore.service.audit.AuditService;
 import org.booklore.service.monitoring.MonitoringRegistrationService;
 import org.booklore.service.progress.ReadingProgressService;
 import org.booklore.util.FileService;
@@ -18,6 +18,7 @@ import org.booklore.util.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -439,5 +440,30 @@ class BookServiceTest {
 
         assertEquals(1, result.size());
         assertTrue(result.contains(shelf1));
+    }
+
+
+    @Test
+    void updatePrimaryFormat_BookNotFound_throwsException() {
+        long bookEntityId = 1L;
+        when(bookRepository.findById(bookEntityId)).thenReturn(Optional.empty());
+        assertThrows(APIException.class, () -> bookService.updatePrimaryFormat(bookEntityId, BookFileType.AUDIOBOOK));
+    }
+
+    @Test
+    void updatePrimaryFormat_UpdatesPrimaryFileType() {
+        BookEntity bookEntity = new BookEntity();
+        bookEntity.setId(1L);
+        bookEntity.setPrimaryBookFileType(null);
+
+
+        ArgumentCaptor<BookEntity> bookEntityCaptor = ArgumentCaptor.forClass(BookEntity.class);
+        when(bookRepository.findById(bookEntity.getId())).thenReturn(Optional.of(bookEntity));
+
+        bookService.updatePrimaryFormat(bookEntity.getId(), BookFileType.AUDIOBOOK);
+
+        verify(bookRepository).save(bookEntityCaptor.capture());
+        BookEntity savedBookEntity = bookEntityCaptor.getValue();
+        assertEquals(BookFileType.AUDIOBOOK, savedBookEntity.getPrimaryBookFileType());
     }
 }
