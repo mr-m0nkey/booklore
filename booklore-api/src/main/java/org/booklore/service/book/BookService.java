@@ -1,5 +1,10 @@
 package org.booklore.service.book;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.booklore.config.security.service.AuthenticationService;
 import org.booklore.exception.ApiError;
 import org.booklore.mapper.BookMapper;
@@ -7,24 +12,17 @@ import org.booklore.model.dto.*;
 import org.booklore.model.dto.request.ReadProgressRequest;
 import org.booklore.model.dto.response.BookDeletionResponse;
 import org.booklore.model.dto.response.BookStatusUpdateResponse;
-import org.booklore.model.entity.BookEntity;
-import org.booklore.model.entity.BookFileEntity;
-import org.booklore.model.entity.LibraryPathEntity;
-import org.booklore.model.entity.UserBookFileProgressEntity;
-import org.booklore.model.entity.UserBookProgressEntity;
+import org.booklore.model.entity.*;
+import org.booklore.model.enums.AuditAction;
 import org.booklore.model.enums.BookFileType;
 import org.booklore.repository.*;
-import org.booklore.repository.BookFileRepository;
+import org.booklore.service.FileStreamingService;
+import org.booklore.service.audit.AuditService;
 import org.booklore.service.metadata.sidecar.SidecarMetadataWriter;
 import org.booklore.service.monitoring.MonitoringRegistrationService;
 import org.booklore.service.progress.ReadingProgressService;
-import org.booklore.service.FileStreamingService;
 import org.booklore.util.FileService;
 import org.booklore.util.FileUtils;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -43,8 +41,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.booklore.model.enums.AuditAction;
-import org.booklore.service.audit.AuditService;
 
 @Slf4j
 @AllArgsConstructor
@@ -515,5 +511,12 @@ public class BookService {
                 .collect(Collectors.toSet());
     }
 
+    public Book updatePrimaryFormat(long bookId, @NotNull BookFileType bookFileType) {
+        BookEntity bookEntity = bookRepository.findById(bookId).orElseThrow(() -> ApiError.BOOK_NOT_FOUND.createException(bookId));
+
+        bookEntity.setPrimaryBookFileType(bookFileType);
+        bookRepository.save(bookEntity);
+        return bookMapper.toBook(bookEntity);
+    }
 }
 
