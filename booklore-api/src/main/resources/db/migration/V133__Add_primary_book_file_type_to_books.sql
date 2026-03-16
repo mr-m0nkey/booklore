@@ -1,1 +1,0 @@
-ALTER TABLE book ADD COLUMN IF NOT EXISTS primary_book_file_type VARCHAR(16) NULL;
